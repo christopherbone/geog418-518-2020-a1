@@ -1,0 +1,199 @@
+#######
+## For this lab you will need the following libraries: 
+## rgdal, tidyverse, lubridate, grid, gridExtra, and gtable
+
+
+#####
+#Install Libraries
+# install.packages("rgdal")
+# install.packages("tidyverse")
+# install.packages("gridExtra")
+
+
+#####
+#Load Libraries
+library("rgdal")
+
+#####
+#Set working directory
+dir <- "YOUR WORKING DIRECTORY"
+setwd(dir)
+getwd()
+
+#####
+#Read in data and extract attribute table
+shp <- readOGR(".", "NAME OF SHAPEFILE") #read in shp file from current (".") working directory
+
+df <- shp@data #Extract the attribute table as a dataframe, store in variable
+class(df) #ensure new variable is a dataframe
+attach(df) #attach dataset
+
+
+#####
+#Inspect data
+names(df) #see column names
+head(df) #see first 6 rows of data
+
+range(df$VARIABLEFORYEAR) #How many years of data is there?
+
+nrow(subset(df, Yearvariable == 2018)) #How many observations in 2018?
+nrow(subset(df, YearVar == 2019)) #How many observations in 2019?
+
+#####
+#Subset 2019 data and calculate descriptive statistics
+df_2019 <- df[which(df$VARIABLEFORYEAR == 2019),] #subset only 2019 data
+
+#Mean
+meanPop <- mean(df_2019$SIZE) #This is going to produce a wrong value (NA) due to a single NA value in data
+meanPop <- mean(df_2019$FIRESIZE, na.rm = TRUE) #Use na.rm = TRUE to ignore NA values in calculation
+
+df_2019$IGNITION_D <- as.Date(df_2019$IGNITION_D) #Convert from factor to date string
+df_2019$IGN_Day <- yday(df_2019$IGNITION_D) #Make new column with Julian day for the ignition date
+meanSummer <- mean(subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243)$FIRESIZE) #Calculate the mean fire size between July 1 (182) and Aug 31 (243)
+
+#Standard Deviation
+sdPop <- sd(df_2019$Size, na.rm = TRUE) #Calculate the SD, ignoring NA values
+sdSummer <- sd(subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243)$FIRESIZE) #Calculate the SD, ignoring NA values only for the summer months
+
+#Mode
+modePop <- as.numeric(names(sort(table(df_2019$SIZE), decreasing = TRUE))[1]) #make frequency table of fire size variable and sort it in desending order and extract the first row (Most Frequent)
+
+#It will be cleaner if we use a new variable for the summer data
+df_Summer <- subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243) #Make new variable to hold summer data
+#make frequency table of fire size variable and sort it in desending order and extract the first row (Most Frequent)
+modeSummer <- as.numeric(names(sort(table(df_Summer$SIZE), decreasing = TRUE))[1])
+
+#Median
+medPop <- median(df_2019$SizeOfFire, na.rm = TRUE)
+medSummer <- median(df_Summer$SizeOfFire, na.rm = TRUE)
+
+#Skewness
+skewPop <- skewness(df_2019$SizeOfFire, na.rm = TRUE)[1]
+skewSummer <- skewness(df_Summer$SizeOfFire, na.rm = TRUE)[1]
+
+#Kurtosis
+kurtPop <- kurtosis(df_2019$SizeOfFire, na.rm = TRUE)[1]
+kurtSummer <- kurtosis(df_Summer$SizeOfFire, na.rm = TRUE)[1]
+
+#CoV
+CoVPop <- (sdPop / meanPop) * 100
+CoVSummer <- (sdSummer / meanSummer) * 100
+
+#Normal distribution test
+normPop_PVAL <- shapiro.test(df_2019$CURRENT_SI)$p.value
+normSummer_PVAL <- shapiro.test(df_Summer$CURRENT_SI)$p.value
+
+#####
+#Create a table of descriptive stats
+
+samples = c("Population", "Summer") #Create an object for the labels
+means = c(meanPop, meanSummer) #Create an object for the means
+sd = c(sdPop, sdSummer) #Create an object for the standard deviations
+median = c(medPop, medSummer) #Create an object for the medians
+mode <- c(modePop, modeSummer) #Create an object for the modes
+skewness <- c(skewPop, skewSummer) #Create an object for the skewness
+kurtosis <- c(kurtPop, kurtSummer) #Create an object for the kurtosis
+CoV <- c(CoVPop, CoVSummer) #Create an object for the CoV
+normality <- c(normPop_PVAL, normSummer_PVAL) #Create an object for the normality PVALUE
+
+data.for.table1 = data.frame(ADD VARIABLES FOR YOUR TABLE)
+data.for.table2 = data.frame(ADD VARIABLES FOR YOUR TABLE)
+
+#Make table 1
+table1 <- tableGrob(data.for.table1, rows = c("","")) #make a table "Graphical Object" (GrOb) 
+t1Caption <- textGrob("Table 1: CAPTION FOR YOUR TABLE", gp = gpar(fontsize = 09))
+padding <- unit(5, "mm")
+
+table1 <- gtable_add_rows(table1, 
+                          heights = grobHeight(t1Caption) + padding, 
+                          pos = 0)
+
+table1 <- gtable_add_grob(table1,
+                          t1Caption, t = 1, l = 2, r = ncol(data.for.table1) + 1)
+
+
+table2 <- tableGrob(data.for.table2, rows = c("",""))
+t2Caption <- textGrob("Table 2: CAPTION FOR YOUR TABLE", gp = gpar(fontsize = 09))
+padding <- unit(5, "mm")
+
+table2 <- gtable_add_rows(table2, 
+                          heights = grobHeight(t2Caption) + padding, 
+                          pos = 0)
+
+table2 <- gtable_add_grob(table2,
+                          t2Caption, t = 1, l = 2, r = ncol(data.for.table2) + 1)
+
+
+
+grid.arrange(table1, newpage = TRUE)
+grid.arrange(table2, newpage = TRUE)
+
+#Printing a table (You can use the same setup for printing other types of objects (see ?png))
+png("Output_Table1.png") #Create an object to print the table to
+grid.arrange(table1, newpage = TRUE)
+dev.off() #Print table
+
+png("Output_Table2.png") #Create an object to print the table to
+grid.arrange(table2, newpage = TRUE) #Create table
+dev.off()
+
+#####
+#Create and Print a histogram
+png("Output_Histogram.png")
+  hist(df_2019$CURRENT_SI, breaks = 30, main = "TITLE OF YOUR HISTOGRAM", xlab = "LABEL FOR AXIS") #Base R style
+dev.off()
+
+histogram <- ggplot(df_2019, aes(x = CURRENT_SI)) + #Create new GGplot object with data attached and fire size mapped to X axis
+  geom_histogram(bins = 30, color = "black", fill = "white") + #make histogram with 30 bins, black outline, white fill
+  labs(title = "TITLE OF HISTOGRAM", x = "AXIS TITLE", y = "AXIS TITLE", caption = "Figure X: MAKE CAPTION FOR FIGURE") + #label plot, x axis, y axis
+  theme_classic() + #set the theme to classic (removes background and borders etc.)
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0.5)) + #set title to center and bold
+  scale_y_continuous(breaks = seq(0, 700, by = 100)) # set y axis labels to 0 - 700 incrimenting by 100
+
+png("Output_Histogram_ggplot.png")
+  histogram
+dev.off()
+
+#####
+#Creating bar graph
+df_2019$IGN_Month <- month(df_2019$IGNITION_D, label = TRUE, abbr = TRUE) #create new column with month of ignition
+
+
+sumMar = sum(subset(df_2019, IGN_Month == "Mar")$FIRESIZE, na.rm = TRUE) #create new object for March
+sumApr = sum(subset(df_2019, IGN_Month == "Apr")$FIRESIZE, na.rm = TRUE) #create new object for April
+sumMay = sum(subset(df_2019, IGN_Month == "May")$FIRESIZE, na.rm = TRUE) #create new object for May
+sumJun = sum(subset(df_2019, IGN_Month == "Jun")$FIRESIZE, na.rm = TRUE) #create new object for June
+sumJul = sum(subset(df_2019, IGN_Month == "Jul")$FIRESIZE, na.rm = TRUE) #create new object for July
+sumAug = sum(subset(df_2019, IGN_Month == "Aug")$FIRESIZE, na.rm = TRUE) #create new object for August
+sumSep = sum(subset(df_2019, IGN_Month == "Sep")$FIRESIZE, na.rm = TRUE) #create new object for September
+months = c("Mar","Apr","May","Jun","Jul", "Aug", "Sep")  #Create labels for the bar graph
+
+png("Output_BarGraph.png") #Create an object to print the bar graph 
+  barplot(c(sumMar,sumApr,sumMay, sumJun, sumJul, sumAug, sumSep), names.arg = months, 
+        main = "TITLE FOR BAR GRAPH", ylab = "AXIS TITLE", xlab = "AXIS TITLE") #Create the bar graph
+dev.off() #Print bar graph
+
+#Total Size by Month GGPLOT
+barGraph <- df_2019 %>% #store graph in bargraph variable and pass data frame as first argument in next line
+  group_by(IGN_Month) %>% #use data frame and group by month and pass to first argument in next line
+  summarise(sumSize = sum(CURRENT_SI, na.rm = TRUE)) %>% #sum up the total fire size for each month and pass to GGplot
+  ggplot(aes(x = IGN_Month, y = sumSize)) + #make new GGPLOT with summary as data and month and total fire size as x and y
+  geom_bar(stat = "identity") + #make bar chart with the Y values from the data (identity)
+  labs(title = "TITLE FOR BAR GRAPH", x = "AXIS TITLE", y = "AXIS TITLE", caption = "Figure X: CAPTION FOR YOUR FIGURE") + #label plot, x axis, y axis
+  theme_classic() + #set the theme to classic (removes background and borders etc.)
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0.5)) #set title to center and bold
+barGraph
+
+png("Output_BarGraph_GG.png")
+  barGraph
+dev.off()
+
+
+#####
+#Lets put it all together
+pdf("Lab_1_Figures_and_Tables.pdf", onefile = TRUE)
+  grid.arrange(table1, newpage = TRUE)
+  grid.arrange(table2, newpage = TRUE)
+  histogram
+  barGraph
+dev.off()
