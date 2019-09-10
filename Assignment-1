@@ -197,3 +197,39 @@ pdf("Lab_1_Figures_and_Tables.pdf", onefile = TRUE)
   histogram
   barGraph
 dev.off()
+
+
+
+#####
+#Creating maps
+#First example
+# bc <- as_Spatial(bc_neighbours()) #Get shp of BC bounds
+# bc <- spTransform(bc, CRS("+init=epsg:4326")) #project to WGS84 geographic (Lat/Long)
+# 
+# bc <- bc[which(bc$name == "British Columbia" ),] #Extract just the BC province
+# 
+# png("FirstMap.png")
+#   map(bc, fill = TRUE, col = "white", bg = "lightblue", ylim = c(40, 70)) #make map of province
+#   points(df_2019$LONGITUDE ,df_2019$LATITUDE , col = "red", pch = 16) #add fire points
+# dev.off()
+   
+#####
+#Making Maps with tm package
+#Make spatial object (Spatial points dataframe) out of data
+# coords <- df_2019[, c("LONGITUDE", "LATITUDE")] #Store coordinates in new object
+# crs <- CRS("+init=epsg:4326") #store the coordinate system (CRS) in a new object
+# 
+# firePoints <- SpatialPointsDataFrame(coords = coords, data = df_2019, proj4string = crs) #Make new spatial Points object using coodinates, data, and projection
+# 
+# map_TM <- tm_shape(bc) + #make the main shape
+#   tm_fill(col = "gray50") +  #fill polygons
+#   tm_shape(firePoints) +
+#   tm_symbols(col = "red", alpha = 0.3) +
+#   tm_layout(title = "BC Fire Locations 2019", title.position = c("LEFT", "BOTTOM"))
+# 
+# map_TM
+# 
+# png("TmMap.png")
+#   map_TM
+# dev.off()
+# 
