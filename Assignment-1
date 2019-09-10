@@ -1,13 +1,16 @@
 #######
-## For this lab you will need the following libraries: 
-## rgdal, tidyverse, lubridate, grid, gridExtra, and gtable
-
-
+## For this lab you will need the following libraries:
+## rgdal, tidyverse, lubridate, grid, gridExtra, gtable, maps, bcmaps, tmap, fBasics, and bcmapsdata
 #####
 #Install Libraries
-# install.packages("rgdal")
-# install.packages("tidyverse")
-# install.packages("gridExtra")
+install.packages("rgdal")
+install.packages("tidyverse")
+install.packages("gridExtra")
+install.packages("maps")
+install.packages("bcmaps")
+install.packages("tmap")
+install.packages("fBasics")
+install.packages('bcmapsdata', repos='https://bcgov.github.io/drat/')
 
 
 #####
