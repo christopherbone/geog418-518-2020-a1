@@ -39,23 +39,22 @@ head(df) #see first 6 rows of data
 
 range(df$VARIABLEFORYEAR) #How many years of data is there?
 
-nrow(subset(df, Yearvariable == 2018)) #How many observations in 2018?
-nrow(subset(df, YearVar == 2019)) #How many observations in 2019?
+nrow(subset(df, YearVar == 2020)) #How many observations in 2020? ***JASON: is this necessary?
 
 #####
-#Subset 2019 data and calculate descriptive statistics
-df_2019 <- df[which(df$VARIABLEFORYEAR == 2019),] #subset only 2019 data
+#Subset 2020 data and calculate descriptive statistics
+df_2020 <- df[which(df$VARIABLEFORYEAR == 2020),] #subset only 2019 data
 
 #Mean
-meanPop <- mean(df_2019$SIZE) #This is going to produce a wrong value (NA) due to a single NA value in data
-meanPop <- mean(df_2019$FIRESIZE, na.rm = TRUE) #Use na.rm = TRUE to ignore NA values in calculation
+meanPop <- mean(df_2020$SIZE) #This is going to produce a wrong value (NA) due to a single NA value in data
+meanPop <- mean(df_2020$FIRESIZE, na.rm = TRUE) #Use na.rm = TRUE to ignore NA values in calculation
 
-df_2019$IGNITION_D <- as.Date(df_2019$IGNITION_D) #Convert from factor to date string
-df_2019$IGN_Day <- yday(df_2019$IGNITION_D) #Make new column with Julian day for the ignition date
+df_2020$IGNITION_D <- as.Date(df_2019$IGNITION_D) #Convert from factor to date string
+df_2020$IGN_Day <- yday(df_2019$IGNITION_D) #Make new column with Julian day for the ignition date
 meanSummer <- mean(subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243)$FIRESIZE) #Calculate the mean fire size between July 1 (182) and Aug 31 (243)
 
 #Standard Deviation
-sdPop <- sd(df_2019$Size, na.rm = TRUE) #Calculate the SD, ignoring NA values
+sdPop <- sd(df_2020$Size, na.rm = TRUE) #Calculate the SD, ignoring NA values
 sdSummer <- sd(subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243)$FIRESIZE) #Calculate the SD, ignoring NA values only for the summer months
 
 #Mode
@@ -146,6 +145,7 @@ png("Output_Histogram.png")
   hist(df_2019$CURRENT_SI, breaks = 30, main = "TITLE OF YOUR HISTOGRAM", xlab = "LABEL FOR AXIS") #Base R style
 dev.off()
 
+#LOOK FOR AND CORRECT AN ERROR IN THE CODE BELOW
 histogram <- ggplot(df_2019, aes(x = CURRENT_SI)) + #Create new GGplot object with data attached and fire size mapped to X axis
   geom_histogram(bins = 30, color = "black", fill = "white") + #make histogram with 30 bins, black outline, white fill
   labs(title = "TITLE OF HISTOGRAM", x = "AXIS TITLE", y = "AXIS TITLE", caption = "Figure X: MAKE CAPTION FOR FIGURE") + #label plot, x axis, y axis
@@ -159,6 +159,7 @@ dev.off()
 
 #####
 #Creating bar graph
+#LOOK FOR AND CORRECT AN ERROR IN THE CODE BELOW
 df_2019$IGN_Month <- month(df_2019$IGNITION_D, label = TRUE, abbr = TRUE) #create new column with month of ignition
 
 
@@ -177,6 +178,7 @@ png("Output_BarGraph.png") #Create an object to print the bar graph
 dev.off() #Print bar graph
 
 #Total Size by Month GGPLOT
+#LOOK FOR AND CORRECT ERRORS IN THE CODE BELOW
 barGraph <- df_2019 %>% #store graph in bargraph variable and pass data frame as first argument in next line
   group_by(IGN_Month) %>% #use data frame and group by month and pass to first argument in next line
   summarise(sumSize = sum(CURRENT_SI, na.rm = TRUE)) %>% #sum up the total fire size for each month and pass to GGplot
@@ -219,6 +221,7 @@ dev.off()
 #####
 #Making Maps with tm package
 #Make spatial object (Spatial points dataframe) out of data
+#LOOK FOR AND CORRECT ERRORS IN THE CODE BELOW
 # coords <- df_2019[, c("LONGITUDE", "LATITUDE")] #Store coordinates in new object
 # crs <- CRS("+init=epsg:4326") #store the coordinate system (CRS) in a new object
 # 
