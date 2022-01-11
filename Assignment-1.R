@@ -1,27 +1,24 @@
 #######
 ## For this lab you will need the following libraries:
-## rgdal, lubridate, e1071, gtable, gridExtra, grid, ggplot2, dplyr, bcmaps, bcmapsdata, raster, maps, tmap, and rgeos 
+## terra, lubridate, e1071, gridExtra, gtable, grid, ggplot2, dplyr, bcmaps, tmap, and sf 
 #####
 #Install Libraries
-install.packages("rgdal")
+install.packages("terra")
 install.packages("lubridate")
 install.packages("e1071")
-install.packages("gtable")
 install.packages("gridExtra")
+install.packages("gtable")
 install.packages("grid")
 install.packages("ggplot2")
 install.packages("dplyr")
 install.packages("bcmaps")
-install.packages('bcmapsdata', repos='https://bcgov.github.io/drat/')
-install.packages("raster")
-install.packages("maps")
 install.packages("tmap")
-install.packages("rgeos")
+install.packages("sf")
 
 
 #####
 #Load Libraries
-library("rgdal")
+library("terra")
 
 #####
 #Set working directory
@@ -31,12 +28,11 @@ getwd()
 
 #####
 #Read in data and extract attribute table
-shp <- readOGR(".", "NAME OF SHAPEFILE") #read in shp file from current (".") working directory
+shp <- vect("./H_FIRE_PNT_point.shp") #read in shp file from current (".") working directory
+shp
 
-df <- shp@data #Extract the attribute table as a dataframe, store in variable
+df <- as.data.frame(shp) #Extract the attribute table as a dataframe, store in variable
 class(df) #ensure new variable is a dataframe
-# attach(df) #attach dataset **REMOVE ??**
-
 
 #####
 #Inspect data
@@ -44,19 +40,25 @@ names(df) #see column names
 head(df) #see first 6 rows of data
 
 typeof(df$VARIABLEFORYEAR) #what is the data type of year?
-df$VARIABLEFORYEAR <- as.numeric(df$VARIABLEFORYEAR) #convert to a number
-typeof(df$VARIABLEFORYEAR) #Confirm the data type has changed
-
 range(df$VARIABLEFORYEAR) #How many years of data is there?
+
+#We will need to subset the data into an given year
+df <- subset(df, df$FIRE_YEAR == YOURASSIGNEDYEAR)
 
 #We will also need to know the date and the month of each fire
 df$IGN_DATE <- as.Date(df$IGN_DATE, "%Y%m%d") #Convert to date string
-df$IGN_Day <- yday(df$DATEVAR) #Make new column with Julian day for the ignition date
+df$IGN_Day <- yday(df$DATEVAR) #Make new column with day of year for the ignition date
 df$IGN_Month <- month(df$DATEVAR, label = TRUE, abbr = TRUE) #create new column with month of ignition
 
 #Check the range of day and month
 range(df$DAYVAR) #Everything seem ok?
 unique(df$MONTHVAR) #Any months seem odd?
+
+#Remove values with an NA date
+df <- subset(df, !is.na(df$DATEVAR))
+
+#Check the range of IGN Date
+range(df$DATEVAR) #Anything odd?
 
 #Calculate new year column from date and check range
 df$IGN_Year <- year(df$DATEVAR)
@@ -65,37 +67,38 @@ range(df$YEARVAR)
 
 
 #####
-#Subset 2020 data and calculate descriptive statistics
-df_2020 <- df[which(df$VARIABLEFORYEAR == 2020),] #subset only 2020 data
+#Clean data to appropriate year and calculate descriptive statistics
+df_year <- df[which(df$VARIABLEFORYEAR == YOURASSIGNEDYEAR),] #subset only your year
 
 #Mean
-meanPop <- mean(df_2020$SIZE) #This is going to produce a wrong value (NA) due to a single NA value in data
-meanPop <- mean(df_2020$FIRESIZE, na.rm = TRUE) #Use na.rm = TRUE to ignore NA values in calculation
+meanPop <- mean(df_year$SIZE) #This could produce a wrong value (NA) due to a single NA value in data
+meanPop <- mean(df_year$SIZE, na.rm = TRUE) #Use na.rm = TRUE to ignore NA values in calculation
 
-meanSummer <- mean(subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243)$FIRESIZE) #Calculate the mean fire size between July 1 (182) and Aug 31 (243)
+#Check this website for the correct day numbers of your year: https://miniwebtool.com/day-of-the-year-calculator/
+meanSummer <- mean(subset(df_year, IGN_Day >= DDD & IGN_Day <= DDD)$FIRESIZE) #Calculate the mean fire size between July 1 and Aug 31
 
 #Standard Deviation
-sdPop <- sd(df_2020$Size, na.rm = TRUE) #Calculate the SD, ignoring NA values
-sdSummer <- sd(subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243)$FIRESIZE) #Calculate the SD, ignoring NA values only for the summer months
+sdPop <- sd(df_year$Size, na.rm = TRUE) #Calculate the SD, ignoring NA values
+sdSummer <- sd(subset(df_year, IGN_Day >= DDD & IGN_Day <= DDD)$FIRESIZE) #Calculate the SD, ignoring NA values only for the summer months
 
 #Mode
-modePop <- as.numeric(names(sort(table(df_2019$SIZE), decreasing = TRUE))[1]) #make frequency table of fire size variable and sort it in desending order and extract the first row (Most Frequent)
+modePop <- as.numeric(names(sort(table(df_year$SIZE), decreasing = TRUE))[1]) #make frequency table of fire size variable and sort it in desending order and extract the first row (Most Frequent)
 
 #It will be cleaner if we use a new variable for the summer data
-df_Summer <- subset(df_2019, IGN_Day >= 182 & IGN_Day <= 243) #Make new variable to hold summer data
+df_Summer <- subset(df_year, IGN_Day >= DDD & IGN_Day <= DDD) #Make new variable to hold summer data
 #make frequency table of fire size variable and sort it in desending order and extract the first row (Most Frequent)
 modeSummer <- as.numeric(names(sort(table(df_Summer$SIZE), decreasing = TRUE))[1])
 
 #Median
-medPop <- median(df_2019$SizeOfFire, na.rm = TRUE)
+medPop <- median(df_year$SizeOfFire, na.rm = TRUE)
 medSummer <- median(df_Summer$SizeOfFire, na.rm = TRUE)
 
 #Skewness
-skewPop <- skewness(df_2019$SizeOfFire, na.rm = TRUE)[1]
+skewPop <- skewness(df_year$SizeOfFire, na.rm = TRUE)[1]
 skewSummer <- skewness(df_Summer$SizeOfFire, na.rm = TRUE)[1]
 
 #Kurtosis
-kurtPop <- kurtosis(df_2019$SizeOfFire, na.rm = TRUE)[1]
+kurtPop <- kurtosis(df_year$SizeOfFire, na.rm = TRUE)[1]
 kurtSummer <- kurtosis(df_Summer$SizeOfFire, na.rm = TRUE)[1]
 
 #CoV
@@ -103,8 +106,8 @@ CoVPop <- (sdPop / meanPop) * 100
 CoVSummer <- (sdSummer / meanSummer) * 100
 
 #Normal distribution test
-normPop_PVAL <- shapiro.test(df_2019$CURRENT_SI)$p.value
-normSummer_PVAL <- shapiro.test(df_Summer$CURRENT_SI)$p.value
+normPop_PVAL <- shapiro.test(df_year$SizeOfFire)$p.value
+normSummer_PVAL <- shapiro.test(df_Summer$SizeOfFire)$p.value
 
 #####
 #Create a table of descriptive stats
@@ -165,11 +168,11 @@ dev.off()
 #####
 #Create and Print a histogram
 png("Output_Histogram.png")
-hist(df_2019$CURRENT_SI, breaks = 30, main = "TITLE OF YOUR HISTOGRAM", xlab = "LABEL FOR AXIS") #Base R style
+hist(df_year$SizeOfFire, breaks = 30, main = "TITLE OF YOUR HISTOGRAM", xlab = "LABEL FOR AXIS") #Base R style
 dev.off()
 
 #LOOK FOR AND CORRECT AN ERROR IN THE CODE BELOW
-histogram <- ggplot(df_2019, aes(x = CURRENT_SI)) + #Create new GGplot object with data attached and fire size mapped to X axis
+histogram <- ggplot(df_year, aes(x = SizeOfFire)) + #Create new GGplot object with data attached and fire size mapped to X axis
   geom_histogram(bins = 30, color = "black", fill = "white") + #make histogram with 30 bins, black outline, white fill
   labs(title = "TITLE OF HISTOGRAM", x = "AXIS TITLE", y = "AXIS TITLE", caption = "Figure X: MAKE CAPTION FOR FIGURE") + #label plot, x axis, y axis
   theme_classic() + #set the theme to classic (removes background and borders etc.)
@@ -183,14 +186,13 @@ dev.off()
 #####
 #Creating bar graph
 #LOOK FOR AND CORRECT AN ERROR IN THE CODE BELOW
-
-sumMar = sum(subset(df_2019, IGN_Month == "Mar")$FIRESIZE, na.rm = TRUE) #create new object for March
-sumApr = sum(subset(df_2019, IGN_Month == "Apr")$FIRESIZE, na.rm = TRUE) #create new object for April
-sumMay = sum(subset(df_2019, IGN_Month == "May")$FIRESIZE, na.rm = TRUE) #create new object for May
-sumJun = sum(subset(df_2019, IGN_Month == "Jun")$FIRESIZE, na.rm = TRUE) #create new object for June
-sumJul = sum(subset(df_2019, IGN_Month == "Jul")$FIRESIZE, na.rm = TRUE) #create new object for July
-sumAug = sum(subset(df_2019, IGN_Month == "Aug")$FIRESIZE, na.rm = TRUE) #create new object for August
-sumSep = sum(subset(df_2019, IGN_Month == "Sep")$FIRESIZE, na.rm = TRUE) #create new object for September
+sumMar = sum(subset(df_year, IGN_Month == "Mar")$FIRESIZE, na.rm = TRUE) #create new object for March
+sumApr = sum(subset(df_year, IGN_Month == "Apr")$FIRESIZE, na.rm = TRUE) #create new object for April
+sumMay = sum(subset(df_year, IGN_Month == "May")$FIRESIZE, na.rm = TRUE) #create new object for May
+sumJun = sum(subset(df_year, IGN_Month == "Jun")$FIRESIZE, na.rm = TRUE) #create new object for June
+sumJul = sum(subset(df_year, IGN_Month == "Jul")$FIRESIZE, na.rm = TRUE) #create new object for July
+sumAug = sum(subset(df_year, IGN_Month == "Aug")$FIRESIZE, na.rm = TRUE) #create new object for August
+sumSep = sum(subset(df_year, IGN_Month == "Sep")$FIRESIZE, na.rm = TRUE) #create new object for September
 months = c("Mar","Apr","May","Jun","Jul", "Aug", "Sep")  #Create labels for the bar graph
 
 png("Output_BarGraph.png") #Create an object to print the bar graph 
@@ -200,9 +202,9 @@ dev.off() #Print bar graph
 
 #Total Size by Month GGPLOT
 #LOOK FOR AND CORRECT ERRORS IN THE CODE BELOW
-barGraph <- df_2019 %>% #store graph in bargraph variable and pass data frame as first argument in next line
+barGraph <- df_year %>% #store graph in bargraph variable and pass data frame as first argument in next line
   group_by(IGN_Month) %>% #use data frame and group by month and pass to first argument in next line
-  summarise(sumSize = sum(CURRENT_SI, na.rm = TRUE)) %>% #sum up the total fire size for each month and pass to GGplot
+  summarise(sumSize = sum(SizeOfFire, na.rm = TRUE)) %>% #sum up the total fire size for each month and pass to GGplot
   ggplot(aes(x = IGN_Month, y = sumSize)) + #make new GGPLOT with summary as data and month and total fire size as x and y
   geom_bar(stat = "identity") + #make bar chart with the Y values from the data (identity)
   labs(title = "TITLE FOR BAR GRAPH", x = "AXIS TITLE", y = "AXIS TITLE", caption = "Figure X: CAPTION FOR YOUR FIGURE") + #label plot, x axis, y axis
@@ -218,48 +220,31 @@ dev.off()
 
 #####
 #Creating maps
-#First example
-bc <- as_Spatial(bc_neighbours()) #Get shp of BC bounds
-bc <- spTransform(bc, CRS("+init=epsg:4326")) #project to WGS84 geographic (Lat/Long)
+bc <- vect(bc_neighbours()) #Get shp of BC bounds
+crs(bc)
+bc <- spTransform(bc, crs("+init=epsg:4326")) #project to WGS84 geographic (Lat/Long)
 
 bc <- bc[which(bc$name == "British Columbia" ),] #Extract just the BC province
 
-png("FirstMap.png")
-  map(bc, fill = TRUE, col = "white", bg = "lightblue", ylim = c(40, 70)) #make map of province
-  points(df_2019$LONGITUDE ,df_2019$LATITUDE , col = "red", pch = 16) #add fire points
-dev.off()
-
 #####
 #Making Maps with tm package
-#Make spatial object (Spatial points dataframe) out of data
+#Make spatial object out of data
 #LOOK FOR AND CORRECT ERRORS IN THE CODE BELOW
-coords <- df_2019[, c("LONGITUDE", "LATITUDE")] #Store coordinates in new object
-crs <- CRS("+init=epsg:4326") #store the coordinate system (CRS) in a new object
+coords <- cbind(df_year$LONG, df_year$LAT) #Store coordinates in new object
+crs <- crs("+init=epsg:4326") #store the coordinate system in a new object
 
-firePoints <- SpatialPointsDataFrame(coords = coords, data = df_2019, proj4string = crs) #Make new spatial Points object using coodinates, data, and projection
+firePoints <- vect(coords, atts = df_year, crs = crs) #Make new spatial Points object using coodinates, data, and projection
 
-map_TM <- tm_shape(bc) + #make the main shape
+map_TM <- tm_shape(sf::st_as_sf(bc)) + #make the main shape
   tm_fill(col = "gray50") +  #fill polygons
-  tm_shape(firePoints) +
+  tm_shape(sf::st_as_sf(firePoints)) +
   tm_symbols(col = "red", alpha = 0.3) +
-  tm_layout(title = "BC Fire Locations 2019", title.position = c("LEFT", "BOTTOM"))
+  tm_layout(title = "Title of Map", title.position = c("LEFT", "BOTTOM"))
 
 map_TM
 
 png("TmMap.png")
-  map_TM
+map_TM
 dev.off()
 
-
-
-
-#####
-#Lets put it all together
-pdf("Lab_1_Figures_and_Tables.pdf", onefile = TRUE)
-  grid.arrange(table1, newpage = TRUE)
-  grid.arrange(table2, newpage = TRUE)
-  histogram
-  barGraph
-  map_TM
-dev.off()
-# 
+#How would you calculate the mean center point location and add it to a map?
